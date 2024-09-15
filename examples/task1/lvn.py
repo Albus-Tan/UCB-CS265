@@ -98,6 +98,16 @@ class LVNTable:
         # ignore instruction not having dest, since it does not produce new value
         if not instr.get('dest'):
             return
+        else:
+            # writing to a variable may "clobber" any previous value it have held
+            keys_to_remove = []
+    
+            for key, (_, v) in self.num2var.items():
+                if v == instr['dest']:
+                    keys_to_remove.append(key)
+            
+            for key in keys_to_remove:
+                del self.num2var[key]
         
         if instr["op"] == 'id':
             if self.lookup_var_id_in_var2num(instr.get("args")[0]):
