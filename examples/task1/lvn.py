@@ -8,7 +8,8 @@ from form_blocks import form_blocks, flatten
 # Value/Expression class used in LVN table
 class Value:
 
-    def __init__(self, op, args: List[int]):
+    def __init__(self, op = None, args: List[int] = None):
+        # if op is None, the Value is defined somewhere out side the block
         self.op = op
         # sequential storage of all op's parameters (use #id in LVN table)
         self.args = args
@@ -18,6 +19,9 @@ class Value:
         if not isinstance(other, Value):
             raise ValueError(f"{type(other)} type cannot conduct equal operation (==) with {type(self)}!")
         
+        if self.op is None or other.op is None:
+            return False
+
         if self.op != other.op:
             return False
 
@@ -30,18 +34,43 @@ class Value:
     
     # for debug
     def __str__(self):
+        if self.op is None:
+            return "(def in prev blk)"
+
         s = self.op
         argstr = ", ".join('#{}'.format(arg) for arg in self.args)
         return '{}({})'.format(s, argstr)
 
 class LVNTable:
-    def __init__(self):
+    def __init__(self, block):
         # List, LVN table that record (#id, Value/Expression, Var)
-        self.num2var: Dict[int, Tuple[Value, str]] = {}
+        self.num2var: Dict[int, Tuple[Value | None, str]] = {}
         self.next_id: int = 1
 
         # Dict, key var name, value #id
         self.var2num: Dict[str, int] = {}
+
+        self._init_table(block)
+
+    def _init_table(self, block):
+
+        # Get all predefined vars (function args, or defined in previous blocks)
+        read = set()
+        written = set()
+
+        for instr in block:
+            args = instr.get('args', [])
+            for arg in args:
+                if arg not in written:
+                    read.add(arg)
+            
+            dest = instr.get('dest')
+            if dest is not None:
+                written.add(dest)
+
+        for var in read:
+            id = self._add_val_in_num2var(Value(),var)
+            self.var2num[var] = id
         
     def lookup_var_in_num2var(self, id : int):
         if id in self.num2var:
@@ -122,7 +151,7 @@ class LVNTable:
 def lvn(function):
     blocks = list(form_blocks(function['instrs']))
     for block in blocks:
-        lvn_table = LVNTable()
+        lvn_table = LVNTable(block)
         for instr in block:
             lvn_table.add_instruction(instr)
     function['instrs'] = flatten(blocks)
