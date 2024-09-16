@@ -44,7 +44,7 @@ class Value:
 class LVNTable:
     def __init__(self, block):
         # List, LVN table that record (#id, Value/Expression, Var)
-        self.num2var: Dict[int, Tuple[Value | None, str]] = {}
+        self.num2var: Dict[int, Tuple[Value | None, List[str]]] = {}
         self.next_id: int = 1
 
         # Dict, key var name, value #id
@@ -73,22 +73,25 @@ class LVNTable:
             self.var2num[var] = id
         
     def lookup_var_in_num2var(self, id : int):
-        if id in self.num2var:
-            return self.num2var[id][1]
+        if id in self.num2var and len(self.num2var[id][1]) >= 1:
+            return self.num2var[id][1][0]
         return None
 
     def _lookup_val_in_num2var(self, target_value : Value):
         for key, (val, var) in self.num2var.items():
-            if val == target_value:
+            if val == target_value and len(var) >= 1:
                 # print(f"eq {val}, {target_value}")
-                return key, var
+                return key, var[0]
         return None, None
     
     def _add_val_in_num2var(self, value: Value, var: str):
         id = self.next_id
-        self.num2var[id] = (value, var)
+        self.num2var[id] = (value, [var])
         self.next_id += 1
         return id
+    
+    def _append_var_in_num2var(self, id: int, var: str):
+        self.num2var[id][1].append(var)
         
     def lookup_var_id_in_var2num(self, var: str):
         return self.var2num.get(var, None)
@@ -98,16 +101,6 @@ class LVNTable:
         # ignore instruction not having dest, since it does not produce new value
         if not instr.get('dest'):
             return
-        else:
-            # writing to a variable may "clobber" any previous value it have held
-            keys_to_remove = []
-    
-            for key, (_, v) in self.num2var.items():
-                if v == instr['dest']:
-                    keys_to_remove.append(key)
-            
-            for key in keys_to_remove:
-                del self.num2var[key]
         
         if instr["op"] == 'id':
             if self.lookup_var_id_in_var2num(instr.get("args")[0]):
@@ -126,6 +119,19 @@ class LVNTable:
                     args.append(id)
                 else:
                     raise RuntimeError(f"var {arg} not defined before")
+
+        if instr['dest'] not in instr.get('args', []):
+            # writing to a variable may "clobber" any previous value it have held 
+            key_to_remove = []   
+            for key, (_, var_list) in self.num2var.items():
+                if instr['dest'] in var_list:
+                    var_list.remove(instr['dest'])
+                if len(var_list) == 0:
+                    # print(f"var_list len becomes 0 after deleting {instr['dest']} in instr {instr}")
+                    key_to_remove.append(key)
+
+            for key in key_to_remove:
+                del self.num2var[key]
 
         # create a new value by packaging this instruction with 
         # the value numbers of its arguments
@@ -155,6 +161,10 @@ class LVNTable:
                 'op': 'id',
                 'args': [var],
             })
+            if 'value' in instr:
+                del instr['value']
+            
+            self._append_var_in_num2var(num, instr.get('dest'))
 
         self.var2num[instr.get('dest')] = num
 
