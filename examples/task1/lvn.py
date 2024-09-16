@@ -43,7 +43,7 @@ class Value:
 
 class LVNTable:
     def __init__(self, block):
-        # List, LVN table that record (#id, Value/Expression, Var)
+        # LVN table that record (#id, Value/Expression, Var)
         self.num2var: Dict[int, Tuple[Value | None, List[str]]] = {}
         self.next_id: int = 1
 
@@ -143,12 +143,6 @@ class LVNTable:
         if num is None:
             # we've never seen this value before
             num = self._add_val_in_num2var(value, instr.get('dest'))
-
-            # if instr will be overwritten later:
-            #     dest = fresh variable name
-            #     instr.dest = dest
-            # else:
-            #     dest = instr.dest
 
             for arg_pos, arg in enumerate(instr.get('args', [])):
                 id = self.lookup_var_id_in_var2num(arg)
