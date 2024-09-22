@@ -26,7 +26,7 @@ def liveness_analysis(fn):
     blocks = cfg.block_map(form_blocks(fn['instrs']))
     cfg.add_terminators(blocks)
 
-    preds, succs = cfg.edges(blocks)
+    succ, pred = cfg.edges(blocks)
 
     # Backwards analysis
     in_ = {list(blocks.keys())[-1]: set()}
@@ -36,18 +36,18 @@ def liveness_analysis(fn):
     while worklist:
         blk = worklist.pop(0)
 
-        inval = set()
-        for n in succs[blk]:
-            inval |= out[n]
+        in_set = set()
+        for p in pred[blk]:
+            in_set |= out[p]
         
-        in_[blk] = inval
+        in_[blk] = in_set
 
         predefined, generated = get_predefs_and_defs(blocks[blk])
-        outval = predefined.union(inval - generated)
+        out_set = predefined.union(in_set - generated)
 
-        if outval != out[blk]:
-            out[blk] = outval
-            worklist += preds[blk]
+        if out_set != out[blk]:
+            out[blk] = out_set
+            worklist += succ[blk]
 
     return blocks, in_
 
