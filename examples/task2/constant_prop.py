@@ -55,7 +55,6 @@ def fold_constant(instr, constant_dict):
         return not_const
 
 def propagate_constant_in_blk(block, in_dict):
-    # TODO: Replace variable with constants
     out_dict = in_dict.copy()
     for instr in block:
         if 'dest' in instr:
