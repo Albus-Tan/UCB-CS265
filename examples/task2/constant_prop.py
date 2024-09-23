@@ -106,8 +106,6 @@ def constant_propagation(fn):
             out[blk] = out_dict
             worklist += succ[blk]
 
-    return blocks, in_
-
 if __name__ == "__main__":
     prog = json.load(sys.stdin)
     for fn in prog["functions"]:
