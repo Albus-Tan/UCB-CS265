@@ -9,9 +9,12 @@ class MemLocation:
         self.allocated_block_name = allocated_block_name
         self.allocated_line_no = allocated_line_no
 
+    def __repr__(self) -> str:
+        return str(self)
+
     def __str__(self):
         if self.allocated_line_no != -1:
-            return f"[MemLocation] allocated at block {self.allocated_block_name}, line {self.allocated_line_no}"
+            return f"[MemLocation] block {self.allocated_block_name}, line {self.allocated_line_no}"
         else:
             return f"[MemLocation] all location"
     
@@ -41,20 +44,19 @@ class MemLocationSet(set):
     def add(self, element):
         if isinstance(element, MemLocation):
             if element == ALL_MEM_LOCATION:
-                self.clear()
+                super().clear()
                 super().add(ALL_MEM_LOCATION)
             else:
                 super().add(element)
         elif isinstance(element, MemLocationSet):
-            self.union(self, element)
+            new_set = self.__class__.union(self, element)
+            super().clear()
+            super().update(new_set)
         else:
             raise TypeError("Only MemLocation instances can be added to the set.")
 
     def insert(self, element):
         self.add(element)
-
-    def union(self, other):
-        self = self.__class__.union(self, other)
 
     @classmethod
     def union(cls, set1, set2):
@@ -140,13 +142,22 @@ def alias_analysis(fn):
     while worklist:
         blk = worklist.pop(0)
 
-        in_[blk] = reduce(union_mem_location_maps, (out[p] for p in pred[blk]), {})
+        unioned_map = reduce(union_mem_location_maps, (out[p] for p in pred[blk]), {})
+        in_[blk] = union_mem_location_maps(in_.get(blk, {}), unioned_map)
 
         out_dict = transfer(blk, blocks[blk], in_[blk])
 
         if out_dict != out[blk]:
             out[blk] = out_dict
             worklist += succ[blk]
+
+    return in_
+
+def print_alias_analysis_result(in_):
+    print("Alias Analysis:")
+    for k in list(in_.keys()):
+        print(f"{k}: {in_[k]}")
+    print("-----------------------")
 
 if __name__ == "__main__":
     # if len(sys.argv) != 2:
@@ -162,5 +173,6 @@ if __name__ == "__main__":
     prog = json.load(sys.stdin)
 
     for fn in prog["functions"]:
-        alias_analysis(fn)
-    json.dump(prog, sys.stdout, indent=2)
+        result = alias_analysis(fn)
+        print_alias_analysis_result(result)
+    # json.dump(prog, sys.stdout, indent=2)
