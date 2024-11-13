@@ -5,4 +5,5 @@ c/CLexer.py
 c/CLexer.tokens
 c/CListener.py
 c/CParser.py
+c/CVisitor.py
 c/.antlr
