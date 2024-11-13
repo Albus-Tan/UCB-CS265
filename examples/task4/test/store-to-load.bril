@@ -1,0 +1,43 @@
+# ARGS: 10
+@main(input: int) {
+  zero: int = const 0;
+  one: int = const 1;
+  neg_one: int = const -1;
+  vals: ptr<int> = alloc input;
+  vals_unchange: ptr<int> = alloc input;
+  store vals zero;
+  store vals_unchange zero;
+  vals_i: ptr<int> = ptradd vals one;
+  store vals_i one;
+  i: int = const 2;
+  i_minus_one: int = add i neg_one;
+  i_minus_two: int = add i_minus_one neg_one;
+  load_test_0: int = load vals_i;
+  load_test_1: int = load vals;
+  load_test_2: int = load vals_unchange;
+.loop:
+  load_test_3: int = load vals_i;
+  load_test_4: int = load vals_unchange;
+  cond: bool = lt i input;
+  br cond .body .done;
+.body:
+  vals_i: ptr<int> = ptradd vals i;
+  vals_i_minus_one: ptr<int> = ptradd vals i_minus_one;
+  vals_i_minus_two: ptr<int> = ptradd vals i_minus_two;
+  tmp: int = load vals_i_minus_one;
+  tmp2: int = load vals_i_minus_two;
+  tmp: int = add tmp tmp2;
+  store vals_i tmp;
+  i: int = add i one;
+  i_minus_one: int = add i_minus_one one;
+  i_minus_two: int = add i_minus_two one;
+  load_test_5: int = load vals_i;
+  jmp .loop;
+.done:
+  load_test_6: int = load vals_i;
+  last: ptr<int> = ptradd vals i_minus_one;
+  tmp: int = load last;
+  print tmp;
+  free vals;
+  ret;
+}

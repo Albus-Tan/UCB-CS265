@@ -1,0 +1,15 @@
+@main() {
+  size: int = const 5;
+  zero: int = const 0;
+  one: int = const 1;
+  vals: ptr<int> = alloc size;
+  store vals zero;
+  load_test: int = load vals;
+  vals_i: ptr<int> = ptradd vals one;
+  load_test_2: int = load vals;
+  store vals_i one;
+  load_test_3: int = load vals;
+  print load_test;
+  print load_test_2;
+  print load_test_3;
+}
