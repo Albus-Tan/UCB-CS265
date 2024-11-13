@@ -8,6 +8,8 @@ chmod +x build.sh
 
 See [Python runtime targets](https://github.com/antlr/antlr4/blob/master/doc/python-target.md) for more information.
 
+# Simple Example
+
 Try parsing an example:
 
 ```
@@ -22,3 +24,7 @@ python ./c/driver.py c/examples/simple.c | bril2txt
 # Run coverted bril program
 python ./c/driver.py c/examples/simple.c | brili -p
 ```
+
+# Test
+
+// TODO: add unit test
