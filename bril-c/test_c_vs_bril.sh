@@ -39,7 +39,7 @@ for FILE in $FILES; do
     C_OUTPUT=$("$C_EXEC")
 
     # Step 2: Use driver.py to convert and run the Bril program
-    python3 ./c/driver.py "$FILE" > "$BRIL_PROG"
+    python3 ./core/driver.py "$FILE" > "$BRIL_PROG"
     BRIL_OUTPUT=$(brili < "$BRIL_PROG" 2>/dev/null)
 
     # Step 3: Compare outputs

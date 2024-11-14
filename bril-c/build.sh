@@ -1,1 +1,1 @@
-antlr4 -visitor -Dlanguage=Python3 c/C.g4
+antlr4 -visitor -Dlanguage=Python3 core/C.g4

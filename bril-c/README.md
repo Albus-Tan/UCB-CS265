@@ -13,16 +13,16 @@ See [Python runtime targets](https://github.com/antlr/antlr4/blob/master/doc/pyt
 Try parsing an example:
 
 ```
-python ./c/driver.py c/examples/simple.c
+python ./core/driver.py core/examples/simple.c
 
 # Use debug mode to print syntax tree
-python ./c/driver.py -D c/examples/simple.c
+python ./core/driver.py -D core/examples/simple.c
 
 # Check coverted bril program
-python ./c/driver.py c/examples/simple.c | bril2txt
+python ./core/driver.py core/examples/simple.c | bril2txt
 
 # Run coverted bril program
-python ./c/driver.py c/examples/simple.c | brili -p
+python ./core/driver.py core/examples/simple.c | brili -p
 ```
 
 # Test
