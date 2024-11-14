@@ -31,3 +31,52 @@ python ./core/driver.py core/examples/simple.c | brili -p
 chmod +x ./test_c_vs_bril.sh
 ./test_c_vs_bril.sh ./tests/
 ```
+
+# Features
+
+## Types
+
+> Translate to `int`, `float` types and `const` in bril
+
+- primitive data types (int, float)
+- const type qualifier
+
+## Arithmetic
+
+> Translate to `add`, `mul`, `sub`, `div` in bril
+
+- binary operators (+,-,*,/)
+- assignment operators (+=, -=, *=, /=)
+
+
+## Comparison
+
+> Translate to `eq`, `lt`, `gt`, `le`, `ge` in bril
+
+- comparison operators (<,>,=,<=,>=,==,!=)
+
+## Logic
+
+> Translate to `not`, `and`, `or` in bril
+
+- boolean logic (!,&,|)
+
+## Control
+
+> Translate to `jmp`, `br` and `labels` in bril
+
+- for loops (for, break)
+- if statements (if-then-else)
+
+## Functions
+
+> Translate to `call`, `ret` in bril
+
+- function calls
+- return statement
+
+## I/O
+
+> Translate to `print` in bril
+
+- printf function
