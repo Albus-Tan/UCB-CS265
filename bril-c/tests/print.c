@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 int main() {
-    int x = 2;
+    int x = 5;
+    int y = 1;
     printf("%d\n", x);
+    printf("%d\n", y);
 }
