@@ -27,4 +27,7 @@ python ./c/driver.py c/examples/simple.c | brili -p
 
 # Test
 
-// TODO: add unit test
+```
+chmod +x ./test_c_vs_bril.sh
+./test_c_vs_bril.sh ./tests/
+```
