@@ -28,6 +28,9 @@ class CToBrilVisitor(CVisitor):
             return temp_var
         elif ctx.expression():
             return self.visit(ctx.expression())
+        elif ctx.StringLiteral():
+            string_value = ''.join([literal.getText().strip('"') for literal in ctx.StringLiteral()])
+            return string_value
         else:
             raise NotImplementedError
 
@@ -101,4 +104,39 @@ class CToBrilVisitor(CVisitor):
             return self.visit(ctx.getChild(0))
 
 
+    def visitPostfixExpression(self, ctx: CParser.PostfixExpressionContext):
+        base_expr = self.visit(ctx.getChild(0))
+
+        if ctx.getChildCount() > 1:
+            for i in range(1, ctx.getChildCount(), 2):
+                if ctx.getChild(i).getText() == '(':
+                    func_name = base_expr
+                    args = []
+                    if ctx.getChild(i + 1).getText() != ')':
+                        arg_list = ctx.getChild(i + 1)
+                        for arg in arg_list.getChildren():
+                            if isinstance(arg, CParser.AssignmentExpressionContext):
+                                args.append(self.visit(arg))
+                                
+                    if func_name == "printf":
+                        for arg in args[1:]:
+                            self.current_function["instrs"].append({
+                                "op": "print",
+                                "args": [arg]
+                            })
+                    else:
+                        # TODO: support Function call
+                        print(f"Unsupported function call: {func_name}")
+                elif ctx.getChild(i).getText() in ['++', '--']:
+                    op = ctx.getChild(i).getText()
+                    temp_var = self.generate_temp_var()
+                    bril_op = 'add' if op == '++' else 'sub'
+                    self.current_function["instrs"].append({
+                        "op": bril_op,
+                        "dest": temp_var,
+                        "args": [base_expr, 1],
+                        "type": "int"
+                    })
+
+        return base_expr 
 
