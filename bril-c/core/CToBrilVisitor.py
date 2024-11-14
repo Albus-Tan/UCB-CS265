@@ -77,7 +77,6 @@ class CToBrilVisitor(CVisitor):
                     "-=": "sub",
                     "*=": "mul",
                     "/=": "div",
-                    "%=": "mod",
                     "&=": "and",
                     "|=": "or"
                 }.get(operator)
@@ -139,4 +138,75 @@ class CToBrilVisitor(CVisitor):
                     })
 
         return base_expr 
+
+    def visitAdditiveExpression(self, ctx: CParser.AdditiveExpressionContext):
+        """
+        Handles addition and subtraction.
+        """
+        if ctx.getChildCount() == 1:
+            # Single child, visit recursively
+            return self.visit(ctx.getChild(0))
+        
+        left = self.visit(ctx.getChild(0))
+        right = self.visit(ctx.getChild(2))
+        op = ctx.getChild(1).getText()  # '+' or '-'
+        temp_var = self.generate_temp_var()
+
+        bril_op = "add" if op == "+" else "sub"
+        self.current_function["instrs"].append({
+            "op": bril_op,
+            "dest": temp_var,
+            "args": [left, right],
+            "type": "int"
+        })
+        return temp_var
+    
+    def visitMultiplicativeExpression(self, ctx: CParser.MultiplicativeExpressionContext):
+        """
+        Handles multiplication, division, and modulo.
+        """
+        if ctx.getChildCount() == 1:
+            # Single child, visit recursively
+            return self.visit(ctx.getChild(0))
+        
+        left = self.visit(ctx.getChild(0))
+        right = self.visit(ctx.getChild(2))
+        op = ctx.getChild(1).getText()  # '*', '/', or '%'
+        temp_var = self.generate_temp_var()
+
+        if op == "%":
+            # Generate equivalent mod operation
+            # mod(a,b) = a − (a / b) × b
+            temp_div = self.generate_temp_var()
+            temp_mul = self.generate_temp_var()
+
+            self.current_function["instrs"].append({
+                "op": "div",
+                "dest": temp_div,
+                "args": [left, right],
+                "type": "int"
+            })
+            self.current_function["instrs"].append({
+                "op": "mul",
+                "dest": temp_mul,
+                "args": [temp_div, right],
+                "type": "int"
+            })
+            self.current_function["instrs"].append({
+                "op": "sub",
+                "dest": temp_var,
+                "args": [left, temp_mul],
+                "type": "int"
+            })
+        else:
+            # Handle * and /
+            bril_op = "mul" if op == "*" else "div"
+            self.current_function["instrs"].append({
+                "op": bril_op,
+                "dest": temp_var,
+                "args": [left, right],
+                "type": "int"
+            })
+        
+        return temp_var
 
