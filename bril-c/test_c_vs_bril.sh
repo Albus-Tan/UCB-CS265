@@ -47,8 +47,10 @@ for FILE in $FILES; do
         echo "PASS: Output matches"
     else
         echo "FAIL: Output mismatch"
-        echo "C Output: $C_OUTPUT"
-        echo "Bril Output: $BRIL_OUTPUT"
+        echo "C Output: "
+        echo "$C_OUTPUT"
+        echo "Bril Output: "
+        echo "$BRIL_OUTPUT"
     fi
 
     echo "---------------------------------"
