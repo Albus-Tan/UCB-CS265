@@ -5,12 +5,14 @@ from CLexer import CLexer
 from CParser import CParser
 from antlr4.tree.Trees import Trees
 from CToBrilVisitor import CToBrilVisitor
+from SemAnalysisVisitor import SemAnalysisVisitor
 
 def main(argv):
     debug_mode = "-D" in argv
     if debug_mode:
         argv.remove("-D")
 
+    # Source Code -> [Lexer and Parser] -> AST -> [SemAnalyze] -> [CodeGen] -> Bril IR
     input_stream = FileStream(argv[1])
     lexer = CLexer(input_stream)
     stream = CommonTokenStream(lexer)
@@ -24,13 +26,21 @@ def main(argv):
     if parser.getNumberOfSyntaxErrors() > 0:
         print("syntax errors")
     else:
-        vinterp = CToBrilVisitor()
-        vinterp.visit(tree)
+        # SemAnalyze
+        if debug_mode:
+            print("\nSemAnalyze:")
+        sem_analysis = SemAnalysisVisitor(debug_mode=debug_mode)
+        sem_analysis.visit(tree)
+        symbol_table = sem_analysis.transfer_symbol_table()
+
+        # CodeGen
+        code_gen = CToBrilVisitor(symbol_table)
+        code_gen.visit(tree)
 
         if debug_mode:
             print("\nGenerated Bril Program:")
         
-        json.dump(vinterp.bril_program, sys.stdout, indent=2)
+        json.dump(code_gen.bril_program, sys.stdout, indent=2)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

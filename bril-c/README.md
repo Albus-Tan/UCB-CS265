@@ -45,7 +45,8 @@ chmod +x ./test_c_vs_bril.sh
 
 > Translate to `add`, `mul`, `sub`, `div` in bril
 
-- binary operators (+,-,*,/)
+- binary operators (+,-,*,/,%)
+    - `%` is supportted through `a % b = a − (a / b) × b`
 - assignment operators (+=, -=, *=, /=)
 
 
