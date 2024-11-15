@@ -1,5 +1,29 @@
 #!/bin/bash
 
+# Function to normalize C output for boolean context
+normalize_bool_output() {
+    local c_output=$1
+    local bril_output=$2
+
+    # Split outputs line by line
+    IFS=$'\n' read -d '' -r -a c_lines <<< "$c_output"
+    IFS=$'\n' read -d '' -r -a bril_lines <<< "$bril_output"
+
+    # Normalize only boolean contexts
+    for i in "${!c_lines[@]}"; do
+        if [[ "${bril_lines[$i]}" == "true" || "${bril_lines[$i]}" == "false" ]]; then
+            if [[ "${c_lines[$i]}" == "1" ]]; then
+                c_lines[$i]="true"
+            elif [[ "${c_lines[$i]}" == "0" ]]; then
+                c_lines[$i]="false"
+            fi
+        fi
+    done
+
+    # Join lines back
+    printf "%s\n" "${c_lines[@]}"
+}
+
 # Check arguments
 if [ "$#" -lt 1 ]; then
     echo "Usage: $0 <c-file-or-directory>"
@@ -42,8 +66,10 @@ for FILE in $FILES; do
     python3 ./core/driver.py "$FILE" > "$BRIL_PROG"
     BRIL_OUTPUT=$(brili < "$BRIL_PROG" 2>/dev/null)
 
-    # Step 3: Compare outputs
-    if [ "$C_OUTPUT" = "$BRIL_OUTPUT" ]; then
+    # Step 3: Normalize and compare outputs
+    NORMALIZED_C_OUTPUT=$(normalize_bool_output "$C_OUTPUT" "$BRIL_OUTPUT")
+
+    if [ "$NORMALIZED_C_OUTPUT" = "$BRIL_OUTPUT" ]; then
         echo "PASS: Output matches"
     else
         echo "FAIL: Output mismatch"
