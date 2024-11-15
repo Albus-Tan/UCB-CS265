@@ -31,10 +31,9 @@ def main(argv):
             print("\nSemAnalyze:")
         sem_analysis = SemAnalysisVisitor(debug_mode=debug_mode)
         sem_analysis.visit(tree)
-        symbol_table = sem_analysis.transfer_symbol_table()
 
         # CodeGen
-        code_gen = CToBrilVisitor(symbol_table)
+        code_gen = CToBrilVisitor()
         code_gen.visit(tree)
 
         if debug_mode:
