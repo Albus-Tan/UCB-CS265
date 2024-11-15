@@ -48,3 +48,8 @@ class CharType(Type, metaclass=SingletonMeta):
 class VoidType(Type, metaclass=SingletonMeta):
     def type_name(self) -> str:
         return "void"
+    
+
+class StringType(Type, metaclass=SingletonMeta):
+    def type_name(self) -> str:
+        return "string"
