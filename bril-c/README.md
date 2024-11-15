@@ -54,6 +54,8 @@ chmod +x ./test_c_vs_bril.sh
 
 > Translate to `eq`, `lt`, `gt`, `le`, `ge` in bril
 
+> Notice that bril will treat the result after comparison as bool, so `int x = 3 < 5;` in C will be converted to `bool x = 3 < 5;`.
+
 - comparison operators (<,>,=,<=,>=,==,!=)
 
 ## Logic

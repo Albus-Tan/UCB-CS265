@@ -15,15 +15,41 @@ class CToBrilVisitor(CVisitor):
     # Primary expressions: variables, constants, or parenthesized expressions
     def visitPrimaryExpression(self, ctx: CParser.PrimaryExpressionContext):
         if ctx.Identifier():
-            return ctx.Identifier().getText()
+            var_name = ctx.Identifier().getText()
+            if var_name in ["true", "false"]:
+                temp_var = self.generate_temp_var()
+                self.current_function["instrs"].append({
+                    "op": "const",
+                    "dest": temp_var,
+                    "type": "bool",
+                    "value": True if var_name == "true" else False
+                })
+                return temp_var
+            else:
+                return var_name
         elif ctx.Constant():
+            # Int, Float and Char
             temp_var = self.generate_temp_var()
-            # TODO: support more types
+            value = ctx.Constant().getText()
+
+            if value.isdigit():
+                const_type = "int"
+                const_value = int(value)
+            elif value.replace('.', '', 1).isdigit() and '.' in value:
+                const_type = "float"
+                const_value = float(value)
+            elif len(value) == 3 and value.startswith("'") and value.endswith("'"):
+                const_type = "char"
+                const_value = value[1]
+            else:
+                raise NotImplementedError(f"Unsupported constant: {value}")
+            
+            # Append the instruction for the constant
             self.current_function["instrs"].append({
                 "op": "const",
                 "dest": temp_var,
-                "type": "int",
-                "value": int(ctx.Constant().getText())
+                "type": const_type,
+                "value": const_value
             })
             return temp_var
         elif ctx.expression():
@@ -47,13 +73,14 @@ class CToBrilVisitor(CVisitor):
         # TODO: support initDeclaratorList
         var_name = ctx.initDeclaratorList().initDeclarator(0).declarator().getText()
         initializer = ctx.initDeclaratorList().initDeclarator(0).initializer()
+        var_type = ctx.declarationSpecifiers().getText()
 
         expr_result = self.visit(initializer.assignmentExpression())
-        # TODO: support more types
+
         self.current_function["instrs"].append({
             "op": "id",
             "dest": var_name,
-            "type": "int",
+            "type": var_type,
             "args": [expr_result]
         })
 
@@ -64,7 +91,8 @@ class CToBrilVisitor(CVisitor):
             right_expr_result = self.visit(ctx.getChild(2))
 
             if operator == "=":
-                # TODO: support more types
+                # TODO: support more types, currently none types other than int can be assigned
+                # We need more advanced type system
                 self.current_function["instrs"].append({
                     "op": "id",
                     "dest": var_name,
@@ -210,3 +238,131 @@ class CToBrilVisitor(CVisitor):
         
         return temp_var
 
+    def visitRelationalExpression(self, ctx: CParser.RelationalExpressionContext):
+        if ctx.getChildCount() == 1:
+            return self.visit(ctx.getChild(0))
+
+        left = self.visit(ctx.getChild(0))
+        right = self.visit(ctx.getChild(2))
+        operator = ctx.getChild(1).getText()
+        temp_var = self.generate_temp_var()
+
+        bril_op = {
+            '<': "lt",
+            '>': "gt",
+            "<=": "le",
+            ">=": "ge"
+        }[operator]
+
+        self.current_function["instrs"].append({
+            "op": bril_op,
+            "dest": temp_var,
+            "args": [left, right],
+            "type": "bool"
+        })
+        return temp_var
+    
+
+    def visitEqualityExpression(self, ctx: CParser.EqualityExpressionContext):
+        if ctx.getChildCount() == 1:
+            return self.visit(ctx.getChild(0))
+
+        left = self.visit(ctx.getChild(0))
+        right = self.visit(ctx.getChild(2))
+        operator = ctx.getChild(1).getText()
+
+        if operator == "==":
+            temp_var = self.generate_temp_var()
+            self.current_function["instrs"].append({
+                "op": "eq",
+                "dest": temp_var,
+                "args": [left, right],
+                "type": "bool"
+            })
+            return temp_var
+        elif operator == "!=":
+            eq_temp = self.generate_temp_var()
+            self.current_function["instrs"].append({
+                "op": "eq",
+                "dest": eq_temp,
+                "args": [left, right],
+                "type": "bool"
+            })
+
+            not_temp = self.generate_temp_var()
+            self.current_function["instrs"].append({
+                "op": "not",
+                "dest": not_temp,
+                "args": [eq_temp],
+                "type": "bool"
+            })
+            return not_temp
+        else:
+            raise NotImplementedError(f"Unsupported equality operator: {operator}")
+        
+    def visitLogicalAndExpression(self, ctx: CParser.LogicalAndExpressionContext):
+        return self._visit_logical_expression(ctx, "and")
+
+    def visitLogicalOrExpression(self, ctx: CParser.LogicalOrExpressionContext):
+        return self._visit_logical_expression(ctx, "or")
+
+    def _visit_logical_expression(self, ctx, bril_op):
+        if ctx.getChildCount() == 1:
+            return self.visit(ctx.getChild(0))
+        
+        left = self.visit(ctx.getChild(0))
+        right = self.visit(ctx.getChild(2))
+        temp_var = self.generate_temp_var()
+        
+        self.current_function["instrs"].append({
+            "op": bril_op,
+            "dest": temp_var,
+            "args": [left, right],
+            "type": "bool"
+        })
+        return temp_var
+    
+    def visitUnaryExpression(self, ctx: CParser.UnaryExpressionContext):
+        """
+        Handles unary expressions for code generation.
+        """
+        if ctx.postfixExpression():
+            return self.visit(ctx.postfixExpression())
+
+        if ctx.unaryOperator():
+            operator = ctx.unaryOperator().getText()
+            operand = self.visit(ctx.castExpression())
+            temp_var = self.generate_temp_var()
+
+            if operator == '+':
+                # No operation needed for unary plus
+                return operand
+            elif operator == '-':
+                zero_var = self.generate_temp_var()
+                self.current_function["instrs"].append({
+                    "op": "const",
+                    "dest": zero_var,
+                    "type": "int",
+                    "value": 0
+                })
+                temp_var = self.generate_temp_var()
+                self.current_function["instrs"].append({
+                    "op": "sub",
+                    "dest": temp_var,
+                    "args": [zero_var, operand],
+                    "type": "int"
+                })
+                return temp_var
+            elif operator == '!':
+                temp_var = self.generate_temp_var()
+                self.current_function["instrs"].append({
+                    "op": "not",
+                    "dest": temp_var,
+                    "args": [operand],
+                    "type": "bool"
+                })
+                return temp_var
+            else:
+                raise NotImplementedError(f"Unsupported unary operator: {operator}")
+        
+        raise NotImplementedError("Unsupported unary expression")
