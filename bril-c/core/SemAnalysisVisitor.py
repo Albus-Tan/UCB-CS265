@@ -12,10 +12,6 @@ class SemAnalysisVisitor(CVisitor):
         if self.debug_mode:
             print(content)
 
-    # Call after semantic analysis finished
-    def transfer_symbol_table(self):
-        return self.symbol_table
-
     def visitFunctionDefinition(self, ctx: CParser.FunctionDefinitionContext):
         """
         Handles function definitions and manages function scope.
@@ -102,7 +98,7 @@ class SemAnalysisVisitor(CVisitor):
             except RuntimeError as e:
                 raise RuntimeError(f"[visitPrimaryExpression] {e}")
         elif ctx.Constant():
-            return IntType()  # Assume constants are integers
+            return IntType()  # TODO: Assume constants are integers
         elif ctx.expression():
             return self.visit(ctx.expression())
         elif ctx.StringLiteral():

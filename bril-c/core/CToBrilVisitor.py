@@ -2,11 +2,10 @@ from CParser import CParser
 from CVisitor import CVisitor
 
 class CToBrilVisitor(CVisitor):
-    def __init__(self, symbol_table):
+    def __init__(self):
         self.bril_program = {"functions": []}
         self.current_function = None
         self.temp_var_counter = 0
-        self.symbol_table = symbol_table
 
     def generate_temp_var(self):
         temp_var = f"temp_{self.temp_var_counter}"
