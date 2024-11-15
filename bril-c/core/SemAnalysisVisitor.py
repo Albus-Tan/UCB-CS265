@@ -1,7 +1,7 @@
 from CVisitor import CVisitor
 from CParser import CParser
 from SymbolTable import UnifiedSymbolTable, VarInfo, FunInfo
-from Types import IntType, FloatType, BoolType, CharType, Type
+from Types import IntType, FloatType, BoolType, CharType, StringType, Type
 
 class SemAnalysisVisitor(CVisitor):
     def __init__(self, debug_mode = False):
@@ -102,8 +102,7 @@ class SemAnalysisVisitor(CVisitor):
         elif ctx.expression():
             return self.visit(ctx.expression())
         elif ctx.StringLiteral():
-            string_value = ''.join([literal.getText().strip('"') for literal in ctx.StringLiteral()])
-            return string_value
+            return StringType()
         else:
             raise NotImplementedError("Unsupported primary expression")
 
