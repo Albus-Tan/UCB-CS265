@@ -47,6 +47,8 @@ else
     exit 1
 fi
 
+ALL_PASSED=true  # Flag to check if all tests pass
+
 # Iterate over each C file
 for FILE in $FILES; do
     echo "Testing $FILE..."
@@ -75,9 +77,19 @@ for FILE in $FILES; do
         echo "FAIL: Output mismatch"
         echo "C Output: "
         echo "$C_OUTPUT"
+        echo "C Output (bool replaced): "
+        echo "$NORMALIZED_C_OUTPUT"
         echo "Bril Output: "
         echo "$BRIL_OUTPUT"
+        ALL_PASSED=false
     fi
 
     echo "---------------------------------"
 done
+
+# Final summary
+if [ "$ALL_PASSED" = true ]; then
+    echo "All tests passed."
+else
+    echo "Some tests failed."
+fi
