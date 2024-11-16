@@ -30,9 +30,9 @@ int main()
 	int result1 = add_one(arg1);
 	printf("%d\n", result1);
 	printf("%d\n", add_three(arg2));
-	printf("%d\n", add_together(add_three(arg1), add_three(arg2)));
+	printf("%d\n", add_together(add_one(add_three(arg1)), add_three(arg2)));
 	int result2 = add_together(arg1, result1);
 	print_two();
-	printf("%d\n", result2);
+	printf("%d\n", result2 + 8);
 	print_two();
 }
