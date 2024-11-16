@@ -1,11 +1,29 @@
 from CParser import CParser
 from CVisitor import CVisitor
+from SymbolTable import SymbolTable, FunInfo
+from Types import Type, VoidType
 
 class CToBrilVisitor(CVisitor):
-    def __init__(self):
+    def __init__(self, debug_mode):
         self.bril_program = {"functions": []}
         self.current_function = None
         self.temp_var_counter = 0
+        self.debug_mode = debug_mode
+
+        # Global function symbol table
+        self.func_table = SymbolTable()
+    
+    def debug(self, content):
+        if self.debug_mode:
+            print(content)
+
+    def declare_function(self, name: str, func_entry: FunInfo):
+        """Declare a function in the function table."""
+        self.func_table.declare_symbol(name, func_entry)
+
+    def lookup_function(self, name: str) -> FunInfo:
+        """Look up a function in the function table."""
+        return self.func_table.lookup_symbol(name)
 
     def generate_temp_var(self):
         temp_var = f"temp_{self.temp_var_counter}"
@@ -62,12 +80,43 @@ class CToBrilVisitor(CVisitor):
 
     def visitFunctionDefinition(self, ctx: CParser.FunctionDefinitionContext):
         func_name = ctx.declarator().directDeclarator().directDeclarator().getText()
+    
+        # Extract function arguments
+        param_list = []
+        if ctx.declarator().directDeclarator().parameterTypeList():
+            param_decls = ctx.declarator().directDeclarator().parameterTypeList().parameterList()
+            for param_decl in param_decls.parameterDeclaration():
+                param_name = param_decl.declarator().getText()
+                param_type_str = param_decl.declarationSpecifiers().getText()
+                param_list.append({"name": param_name, "type": param_type_str})
+
+        self.debug(f"[visitFunctionDefinition] Function {func_name}() extracted arguments: {param_list}")
+
+        # Construct function object
         self.current_function = {
             "name": func_name,
+            "args": param_list,
             "instrs": []
         }
+
+        # Add return type if not main and return type is not void
+        return_type = ctx.declarationSpecifiers().getText()
+        if func_name != "main" and return_type != "void":
+            self.current_function["type"] = return_type
+
+        # Register the function in symbol table
+        func_info = FunInfo(
+            name=func_name,
+            param_types=[Type.from_string(param["type"]) for param in param_list],
+            return_type=Type.from_string(return_type),
+            scope="global"
+        )
+        self.declare_function(func_name, func_info)
+
+        # Visit the function body
         self.visit(ctx.compoundStatement())
         self.bril_program["functions"].append(self.current_function)
+        
 
     def visitDeclaration(self, ctx: CParser.DeclarationContext):
         # TODO: support initDeclaratorList
@@ -136,6 +185,7 @@ class CToBrilVisitor(CVisitor):
 
         if ctx.getChildCount() > 1:
             for i in range(1, ctx.getChildCount(), 2):
+                # Function Call
                 if ctx.getChild(i).getText() == '(':
                     func_name = base_expr
                     args = []
@@ -152,16 +202,42 @@ class CToBrilVisitor(CVisitor):
                                 "args": [arg]
                             })
                     else:
-                        # TODO: support Function call
-                        print(f"Unsupported function call: {func_name}")
+                        call_instr = {
+                            "op": "call",
+                            "funcs": [func_name],
+                            "args": args,
+                        }
+                        try:
+                            func_info = self.lookup_function(func_name)
+                        except RuntimeError as e:
+                            raise RuntimeError(f"[visitPostfixExpression] Undefined function '{func_name}': {e}")
+                
+                        if func_info.return_type is VoidType():
+                            self.current_function["instrs"].append(call_instr)
+                            return None
+                        else:
+                            temp_var = self.generate_temp_var()
+                            call_instr["dest"] = temp_var
+                            call_instr["type"] = func_info.return_type.type_name()
+                            self.current_function["instrs"].append(call_instr)
+                            return temp_var
+
+
                 elif ctx.getChild(i).getText() in ['++', '--']:
+                    # TODO: not sure whether is correct implementation
                     op = ctx.getChild(i).getText()
-                    temp_var = self.generate_temp_var()
+                    one_var = self.generate_temp_var()
+                    self.current_function["instrs"].append({
+                        "op": "const",
+                        "dest": one_var,
+                        "type": "int",
+                        "value": 1
+                    })
                     bril_op = 'add' if op == '++' else 'sub'
                     self.current_function["instrs"].append({
                         "op": bril_op,
-                        "dest": temp_var,
-                        "args": [base_expr, 1],
+                        "dest": base_expr,
+                        "args": [base_expr, one_var],
                         "type": "int"
                     })
 
@@ -366,3 +442,35 @@ class CToBrilVisitor(CVisitor):
                 raise NotImplementedError(f"Unsupported unary operator: {operator}")
         
         raise NotImplementedError("Unsupported unary expression")
+
+    def visitJumpStatement(self, ctx: CParser.JumpStatementContext):
+        """
+        Handles jump statements such as return, break, continue, and goto.
+        """
+        stmt_type = ctx.getChild(0).getText()
+        if stmt_type == 'return':
+            if ctx.expression():
+                # If return has an expression, evaluate it.
+                return_value = self.visit(ctx.expression())
+                if self.current_function.get("type"):
+                    # main function in bril should not return value
+                    self.current_function["instrs"].append({
+                        "op": "ret",
+                        "args": [return_value]
+                    })
+            else:
+                # No return value
+                self.current_function["instrs"].append({
+                    "op": "ret"
+                })
+        elif stmt_type in ['break', 'continue']:
+            # TODO: Handle 'break' and 'continue' if loops are implemented
+            raise NotImplementedError(f"'{stmt_type}' is not yet supported.")
+        elif stmt_type == 'goto':
+            label = ctx.Identifier().getText() if ctx.Identifier() else self.visit(ctx.unaryExpression())
+            self.current_function["instrs"].append({
+                "op": "jmp",
+                "args": [label]
+            })
+        else:
+            raise NotImplementedError(f"Unsupported jump statement: {stmt_type}")
