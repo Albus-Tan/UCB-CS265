@@ -12,6 +12,23 @@ class Type(ABC):
     def type_name(self) -> str:
         """Return the name of the type."""
         raise NotImplementedError
+    
+    @staticmethod
+    def from_string(type_name: str) -> 'Type':
+        """Factory method to create a Type instance from a string."""
+        type_map = {
+            "int": IntType(),
+            "float": FloatType(),
+            "bool": BoolType(),
+            "char": CharType(),
+            "void": VoidType(),
+            "string": StringType(),
+        }
+        if type_name in type_map:
+            return type_map[type_name]
+        else:
+            raise ValueError(f"Unknown type name: {type_name}")
+
 
 
 # Singleton Metaclass for Types

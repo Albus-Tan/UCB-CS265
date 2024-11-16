@@ -30,10 +30,12 @@ def main(argv):
         if debug_mode:
             print("\nSemAnalyze:")
         sem_analysis = SemAnalysisVisitor(debug_mode=debug_mode)
-        sem_analysis.visit(tree)
+        # sem_analysis.visit(tree)
 
         # CodeGen
-        code_gen = CToBrilVisitor()
+        if debug_mode:
+            print("\nCodeGen:")
+        code_gen = CToBrilVisitor(debug_mode=debug_mode)
         code_gen.visit(tree)
 
         if debug_mode:

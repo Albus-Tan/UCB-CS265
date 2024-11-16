@@ -5,6 +5,7 @@ int main() {
     int b = 20;
 
     // Comparison tests
+    printf("%d\n", a != b);
     printf("%d\n", a == b);
     printf("%d\n", a < b);
     printf("%d\n", a > b);
