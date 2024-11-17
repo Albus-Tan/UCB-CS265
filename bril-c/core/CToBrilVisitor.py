@@ -3,16 +3,18 @@ from CVisitor import CVisitor
 from SymbolTable import SymbolTable, FunInfo
 from Types import Type, VoidType
 
+
 class CToBrilVisitor(CVisitor):
     def __init__(self, debug_mode):
         self.bril_program = {"functions": []}
         self.current_function = None
         self.temp_var_counter = 0
+        self.if_counter = 0
         self.debug_mode = debug_mode
 
         # Global function symbol table
         self.func_table = SymbolTable()
-    
+
     def debug(self, content):
         if self.debug_mode:
             print(content)
@@ -61,7 +63,7 @@ class CToBrilVisitor(CVisitor):
                 const_value = value[1]
             else:
                 raise NotImplementedError(f"Unsupported constant: {value}")
-            
+
             # Append the instruction for the constant
             self.current_function["instrs"].append({
                 "op": "const",
@@ -80,7 +82,7 @@ class CToBrilVisitor(CVisitor):
 
     def visitFunctionDefinition(self, ctx: CParser.FunctionDefinitionContext):
         func_name = ctx.declarator().directDeclarator().directDeclarator().getText()
-    
+
         # Extract function arguments
         param_list = []
         if ctx.declarator().directDeclarator().parameterTypeList():
@@ -116,7 +118,6 @@ class CToBrilVisitor(CVisitor):
         # Visit the function body
         self.visit(ctx.compoundStatement())
         self.bril_program["functions"].append(self.current_function)
-        
 
     def visitDeclaration(self, ctx: CParser.DeclarationContext):
         # TODO: support initDeclaratorList
@@ -132,6 +133,42 @@ class CToBrilVisitor(CVisitor):
             "type": var_type,
             "args": [expr_result]
         })
+
+    def visitSelectionStatement(self, ctx):
+        if ctx.If():
+            expr_result = self.visit(ctx.expression())
+            if_counter = self.if_counter
+            self.if_counter += 1
+            if ctx.Else():
+                self.current_function["instrs"].append({
+                    "op": "br",
+                    "args": [expr_result],
+                    "labels": [f"if_then_{if_counter}", f"if_else_{if_counter}"]
+                })
+            else:
+                self.current_function["instrs"].append({
+                    "op": "br",
+                    "args": [expr_result],
+                    "labels": [f"if_then_{if_counter}", f"if_exit_{if_counter}"]
+                })
+            self.current_function["instrs"].append({
+                "label": f"if_then_{if_counter}"
+            })
+            self.visit(ctx.statement(0))
+            if ctx.Else():
+                self.current_function["instrs"].append({
+                    "op": "jmp",
+                    "labels": [f"if_exit_{if_counter}"]
+                })
+                self.current_function["instrs"].append({
+                    "label": f"if_else_{if_counter}"
+                })
+                self.visit(ctx.statement(1))
+            self.current_function["instrs"].append({
+                "label": f"if_exit_{if_counter}"
+            })
+        else:
+            raise NotImplementedError
 
     def visitAssignmentExpression(self, ctx: CParser.AssignmentExpressionContext):
         if ctx.getChildCount() == 3 and ctx.assignmentOperator():
@@ -179,7 +216,6 @@ class CToBrilVisitor(CVisitor):
             # Deal with other types of assignmentExpression (e.g. conditionalExpression)
             return self.visit(ctx.getChild(0))
 
-
     def visitPostfixExpression(self, ctx: CParser.PostfixExpressionContext):
         base_expr = self.visit(ctx.getChild(0))
 
@@ -194,7 +230,7 @@ class CToBrilVisitor(CVisitor):
                         for arg in arg_list.getChildren():
                             if isinstance(arg, CParser.AssignmentExpressionContext):
                                 args.append(self.visit(arg))
-                                
+
                     if func_name == "printf":
                         for arg in args[1:]:
                             self.current_function["instrs"].append({
@@ -211,7 +247,7 @@ class CToBrilVisitor(CVisitor):
                             func_info = self.lookup_function(func_name)
                         except RuntimeError as e:
                             raise RuntimeError(f"[visitPostfixExpression] Undefined function '{func_name}': {e}")
-                
+
                         if func_info.return_type is VoidType():
                             self.current_function["instrs"].append(call_instr)
                             return None
@@ -221,7 +257,6 @@ class CToBrilVisitor(CVisitor):
                             call_instr["type"] = func_info.return_type.type_name()
                             self.current_function["instrs"].append(call_instr)
                             return temp_var
-
 
                 elif ctx.getChild(i).getText() in ['++', '--']:
                     # TODO: not sure whether is correct implementation
@@ -241,7 +276,7 @@ class CToBrilVisitor(CVisitor):
                         "type": "int"
                     })
 
-        return base_expr 
+        return base_expr
 
     def visitAdditiveExpression(self, ctx: CParser.AdditiveExpressionContext):
         """
@@ -250,7 +285,7 @@ class CToBrilVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             # Single child, visit recursively
             return self.visit(ctx.getChild(0))
-        
+
         left = self.visit(ctx.getChild(0))
         right = self.visit(ctx.getChild(2))
         op = ctx.getChild(1).getText()  # '+' or '-'
@@ -264,7 +299,7 @@ class CToBrilVisitor(CVisitor):
             "type": "int"
         })
         return temp_var
-    
+
     def visitMultiplicativeExpression(self, ctx: CParser.MultiplicativeExpressionContext):
         """
         Handles multiplication, division, and modulo.
@@ -272,7 +307,7 @@ class CToBrilVisitor(CVisitor):
         if ctx.getChildCount() == 1:
             # Single child, visit recursively
             return self.visit(ctx.getChild(0))
-        
+
         left = self.visit(ctx.getChild(0))
         right = self.visit(ctx.getChild(2))
         op = ctx.getChild(1).getText()  # '*', '/', or '%'
@@ -311,7 +346,7 @@ class CToBrilVisitor(CVisitor):
                 "args": [left, right],
                 "type": "int"
             })
-        
+
         return temp_var
 
     def visitRelationalExpression(self, ctx: CParser.RelationalExpressionContext):
@@ -337,7 +372,6 @@ class CToBrilVisitor(CVisitor):
             "type": "bool"
         })
         return temp_var
-    
 
     def visitEqualityExpression(self, ctx: CParser.EqualityExpressionContext):
         if ctx.getChildCount() == 1:
@@ -375,7 +409,7 @@ class CToBrilVisitor(CVisitor):
             return not_temp
         else:
             raise NotImplementedError(f"Unsupported equality operator: {operator}")
-        
+
     def visitLogicalAndExpression(self, ctx: CParser.LogicalAndExpressionContext):
         return self._visit_logical_expression(ctx, "and")
 
@@ -385,11 +419,11 @@ class CToBrilVisitor(CVisitor):
     def _visit_logical_expression(self, ctx, bril_op):
         if ctx.getChildCount() == 1:
             return self.visit(ctx.getChild(0))
-        
+
         left = self.visit(ctx.getChild(0))
         right = self.visit(ctx.getChild(2))
         temp_var = self.generate_temp_var()
-        
+
         self.current_function["instrs"].append({
             "op": bril_op,
             "dest": temp_var,
@@ -397,7 +431,7 @@ class CToBrilVisitor(CVisitor):
             "type": "bool"
         })
         return temp_var
-    
+
     def visitUnaryExpression(self, ctx: CParser.UnaryExpressionContext):
         """
         Handles unary expressions for code generation.
@@ -440,7 +474,7 @@ class CToBrilVisitor(CVisitor):
                 return temp_var
             else:
                 raise NotImplementedError(f"Unsupported unary operator: {operator}")
-        
+
         raise NotImplementedError("Unsupported unary expression")
 
     def visitJumpStatement(self, ctx: CParser.JumpStatementContext):
@@ -470,7 +504,7 @@ class CToBrilVisitor(CVisitor):
             label = ctx.Identifier().getText() if ctx.Identifier() else self.visit(ctx.unaryExpression())
             self.current_function["instrs"].append({
                 "op": "jmp",
-                "args": [label]
+                "labels": [label]
             })
         else:
             raise NotImplementedError(f"Unsupported jump statement: {stmt_type}")
