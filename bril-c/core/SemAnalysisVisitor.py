@@ -3,8 +3,9 @@ from CParser import CParser
 from SymbolTable import UnifiedSymbolTable, VarInfo, FunInfo
 from Types import IntType, FloatType, BoolType, CharType, StringType, Type
 
+
 class SemAnalysisVisitor(CVisitor):
-    def __init__(self, debug_mode = False):
+    def __init__(self, debug_mode=False):
         self.symbol_table = UnifiedSymbolTable()
         self.debug_mode = debug_mode
 
@@ -46,6 +47,14 @@ class SemAnalysisVisitor(CVisitor):
             self.debug(f"Declared variable: {var_name}, type: {var_type.type_name()}")
         except RuntimeError as e:
             raise RuntimeError(f"[visitDeclaration] {e}")
+
+    def visitSelectionStatement(self, ctx: CParser.SelectionStatementContext):
+        if ctx.If():
+            self.visit(ctx.expression())
+            # check expression type?
+            self.visit(ctx.statement(0))
+            if ctx.Else():
+                self.visit(ctx.statement(1))
 
     def visitAssignmentExpression(self, ctx: CParser.AssignmentExpressionContext):
         """
@@ -91,7 +100,7 @@ class SemAnalysisVisitor(CVisitor):
                 return var_info.var_type
             except RuntimeError:
                 pass
-            
+
             try:
                 func_info = self.symbol_table.lookup_function(var_name)
                 return func_info.return_type
