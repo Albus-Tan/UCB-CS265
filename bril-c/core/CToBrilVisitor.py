@@ -10,6 +10,7 @@ class CToBrilVisitor(CVisitor):
         self.current_function = None
         self.temp_var_counter = 0
         self.if_counter = 0
+        self.for_counter = 0
         self.debug_mode = debug_mode
 
         # Global function symbol table
@@ -169,6 +170,65 @@ class CToBrilVisitor(CVisitor):
             })
         else:
             raise NotImplementedError
+
+    def visitIterationStatement(self, ctx: CParser.IterationStatementContext):
+        if ctx.For():
+            children = list(ctx.forCondition().getChildren())
+            semicolon_indices = [i for i, child in enumerate(children) if child.getText() == ';']
+            if ctx.forCondition().forDeclaration():
+                self.visit(ctx.forCondition().forDeclaration())
+            elif ctx.forCondition().expression():
+                self.visit(ctx.forCondition().expression())
+
+            for_condition = None
+            for_increment = None
+            for_expressions = ctx.forCondition().forExpression()
+            if len(for_expressions) == 1:
+                expr_index = children.index(for_expressions[0])
+                if expr_index < semicolon_indices[1]:
+                    for_condition = for_expressions[0]
+                else:
+                    for_increment = for_expressions[0]
+            else:
+                for_condition = for_expressions[0]
+                for_increment = for_expressions[1]
+
+            for_counter = self.for_counter
+            self.for_counter += 1
+            self.current_function["instrs"].append({
+                "label": f"for_cond_{for_counter}"
+            })
+            if for_condition:
+                expr_result = self.visit(for_condition)
+                self.current_function["instrs"].append({
+                    "op": "br",
+                    "args": [expr_result],
+                    "labels": [f"for_body_{for_counter}", f"for_exit_{for_counter}"]
+                })
+            self.current_function["instrs"].append({
+                "label": f"for_body_{for_counter}"
+            })
+            self.visit(ctx.statement())
+            if for_increment:
+                self.visit(for_increment)
+            self.current_function["instrs"].append({
+                "op": "jmp",
+                "labels": [f"for_cond_{for_counter}"]
+            })
+            self.current_function["instrs"].append({
+                "label": f"for_exit_{for_counter}"
+            })
+        else:
+            raise NotImplementedError("Unsupported iteration statement")
+
+    def visitForDeclaration(self, ctx):
+        return self.visitDeclaration(ctx)
+
+    def visitForExpression(self, ctx: CParser.ForExpressionContext):
+        ret = None
+        for expr in ctx.assignmentExpression():
+            ret = self.visit(expr)
+        return ret
 
     def visitAssignmentExpression(self, ctx: CParser.AssignmentExpressionContext):
         if ctx.getChildCount() == 3 and ctx.assignmentOperator():

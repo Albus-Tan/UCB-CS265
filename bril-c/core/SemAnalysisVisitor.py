@@ -55,6 +55,41 @@ class SemAnalysisVisitor(CVisitor):
             self.visit(ctx.statement(0))
             if ctx.Else():
                 self.visit(ctx.statement(1))
+        else:
+            raise NotImplementedError("Unsupported selection statement")
+
+    def visitIterationStatement(self, ctx: CParser.IterationStatementContext):
+        if ctx.For():
+            children = list(ctx.forCondition().getChildren())
+            semicolon_indices = [i for i, child in enumerate(children) if child.getText() == ';']
+            if ctx.forCondition().forDeclaration():
+                self.visit(ctx.forCondition().forDeclaration())
+            elif ctx.forCondition().expression():
+                self.visit(ctx.forCondition().expression())
+
+            for_expressions = ctx.forCondition().forExpression()
+            if len(for_expressions) == 1:
+                expr_index = children.index(for_expressions[0])
+                if expr_index < semicolon_indices[1]:
+                    # Condition
+                    self.visit(for_expressions[0])
+                else:
+                    # Increment
+                    self.visit(for_expressions[0])
+            else:
+                self.visit(for_expressions[0])
+                self.visit(for_expressions[1])
+
+            self.visit(ctx.statement())
+        else:
+            raise NotImplementedError("Unsupported iteration statement")
+
+    def visitForDeclaration(self, ctx):
+        return self.visitDeclaration(ctx)
+
+    def visitForExpression(self, ctx: CParser.ForExpressionContext):
+        for expr in ctx.assignmentExpression():
+            self.visit(expr)
 
     def visitAssignmentExpression(self, ctx: CParser.AssignmentExpressionContext):
         """
