@@ -30,7 +30,7 @@ def main(argv):
         if debug_mode:
             print("\nSemAnalyze:")
         sem_analysis = SemAnalysisVisitor(debug_mode=debug_mode)
-        # sem_analysis.visit(tree)
+        sem_analysis.visit(tree)
 
         # CodeGen
         if debug_mode:
