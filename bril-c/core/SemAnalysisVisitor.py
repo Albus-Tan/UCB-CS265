@@ -1,7 +1,7 @@
 from CVisitor import CVisitor
 from CParser import CParser
 from SymbolTable import UnifiedSymbolTable, VarInfo, FunInfo
-from Types import IntType, FloatType, BoolType, CharType, StringType, Type
+from Types import IntType, FloatType, BoolType, CharType, StringType, VoidType, Type
 
 
 class SemAnalysisVisitor(CVisitor):
@@ -18,10 +18,19 @@ class SemAnalysisVisitor(CVisitor):
         Handles function definitions and manages function scope.
         """
         func_name = ctx.declarator().getText().split('(')[0]  # Remove parentheses for function name
-        param_types = []  # TODO: Extract parameter types from the context
-        return_type = self.determine_type(ctx.declarationSpecifiers().getText())
 
-        func_info = FunInfo(func_name, param_types, return_type, "global")
+        # Extract function parameters
+        param_list = []
+        if ctx.declarator().directDeclarator().parameterTypeList():
+            param_decls = ctx.declarator().directDeclarator().parameterTypeList().parameterList()
+            for param_decl in param_decls.parameterDeclaration():
+                param_name = param_decl.declarator().getText()
+                param_type_str = param_decl.declarationSpecifiers().getText()
+                param_list.append({"name": param_name, "type": Type.from_string(param_type_str)})
+
+        return_type = Type.from_string(ctx.declarationSpecifiers().getText())
+
+        func_info = FunInfo(func_name, [param["type"] for param in param_list], return_type, "global")
         try:
             self.symbol_table.declare_function(func_name, func_info)
             self.debug(f"Declared function: {func_name}, return type: {return_type.type_name()}")
@@ -30,6 +39,11 @@ class SemAnalysisVisitor(CVisitor):
 
         self.debug(f"Entering function scope: {func_name}")
         self.symbol_table.enter_scope()  # Enter function scope
+
+        # Init function paramater in symbol_table
+        for param_info in param_list:
+            self.symbol_table.declare_variable(param_info["name"], VarInfo(param_info["name"], param_info["type"], "local"))
+
         self.visit(ctx.compoundStatement())  # Visit function body
         self.symbol_table.exit_scope()  # Exit function scope
         self.debug(f"Exiting function scope: {func_name}")
@@ -39,7 +53,7 @@ class SemAnalysisVisitor(CVisitor):
         Handles variable declarations.
         """
         var_name = ctx.initDeclaratorList().initDeclarator(0).declarator().getText()
-        var_type = self.determine_type(ctx.declarationSpecifiers().getText())
+        var_type = Type.from_string(ctx.declarationSpecifiers().getText())
 
         try:
             var_info = VarInfo(var_name, var_type, "local" if len(self.symbol_table.var_table.scopes) > 1 else "global")
@@ -149,18 +163,3 @@ class SemAnalysisVisitor(CVisitor):
             return StringType()
         else:
             raise NotImplementedError("Unsupported primary expression")
-
-    def determine_type(self, type_str: str) -> Type:
-        """
-        Maps string representation of types to Type objects.
-        """
-        if type_str == "int":
-            return IntType()
-        elif type_str == "float":
-            return FloatType()
-        elif type_str == "bool":
-            return BoolType()
-        elif type_str == "char":
-            return CharType()
-        else:
-            raise TypeError(f"Unknown type: {type_str}")
