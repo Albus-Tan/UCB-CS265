@@ -52,6 +52,8 @@ class SemAnalysisVisitor(CVisitor):
         """
         Handles variable declarations.
         """
+        if not ctx.initDeclaratorList():
+            return
         var_name = ctx.initDeclaratorList().initDeclarator(0).declarator().getText()
         var_type = Type.from_string(ctx.declarationSpecifiers().getText())
 
@@ -144,6 +146,8 @@ class SemAnalysisVisitor(CVisitor):
         """
         if ctx.Identifier():
             var_name = ctx.Identifier().getText()
+            if var_name in ["true", "false"]:
+                return BoolType()
             try:
                 var_info = self.symbol_table.lookup_variable(var_name)
                 return var_info.var_type
