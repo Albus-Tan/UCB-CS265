@@ -48,6 +48,7 @@ chmod +x ./test_c_vs_bril.sh
 - binary operators (+,-,*,/,%)
     - `%` is supportted through `a % b = a − (a / b) × b`
 - assignment operators (+=, -=, *=, /=)
+- postfix operators (++, --)
 
 
 ## Comparison

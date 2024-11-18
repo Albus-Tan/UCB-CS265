@@ -12,9 +12,9 @@ int main() {
        number = lowerBound;
    }
 
-   for (; number <= upperBound; number = number + 1) {
+   for (; number <= upperBound; number++) {
        bool isPrime = true;
-       for (int divisor = 2; divisor <= number / 2; divisor = divisor + 1) {
+       for (int divisor = 2; divisor <= number / 2; divisor++) {
            int remainder = number - (number / divisor) * divisor;
            if (remainder == 0) {
                isPrime = false;
