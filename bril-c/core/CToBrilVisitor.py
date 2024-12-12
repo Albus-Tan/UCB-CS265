@@ -11,6 +11,7 @@ class CToBrilVisitor(CVisitor):
         self.temp_var_counter = 0
         self.if_counter = 0
         self.for_counter = 0
+        self.current_for_stack = []
         self.debug_mode = debug_mode
 
         # Global function symbol table
@@ -208,7 +209,12 @@ class CToBrilVisitor(CVisitor):
             self.current_function["instrs"].append({
                 "label": f"for_body_{for_counter}"
             })
+            self.current_for_stack.append(for_counter)
             self.visit(ctx.statement())
+            self.current_for_stack.pop()
+            self.current_function["instrs"].append({
+                "label": f"for_incr_{for_counter}"
+            })
             if for_increment:
                 self.visit(for_increment)
             self.current_function["instrs"].append({
@@ -558,8 +564,18 @@ class CToBrilVisitor(CVisitor):
                     "op": "ret"
                 })
         elif stmt_type in ['break', 'continue']:
-            # TODO: Handle 'break' and 'continue' if loops are implemented
-            raise NotImplementedError(f"'{stmt_type}' is not yet supported.")
+            if len(self.current_for_stack) == 0:
+                raise NotImplementedError(f"'{stmt_type}' outside of loop is not supported.")
+            if stmt_type == 'break':
+                self.current_function["instrs"].append({
+                    "op": "jmp",
+                    "labels": [f"for_exit_{self.current_for_stack[-1]}"]
+                })
+            elif stmt_type == 'continue':
+                self.current_function["instrs"].append({
+                    "op": "jmp",
+                    "labels": [f"for_incr_{self.current_for_stack[-1]}"]
+                })
         elif stmt_type == 'goto':
             label = ctx.Identifier().getText() if ctx.Identifier() else self.visit(ctx.unaryExpression())
             self.current_function["instrs"].append({
