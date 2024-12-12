@@ -78,6 +78,7 @@ class SemAnalysisVisitor(CVisitor):
         if ctx.For():
             children = list(ctx.forCondition().getChildren())
             semicolon_indices = [i for i, child in enumerate(children) if child.getText() == ';']
+            self.symbol_table.enter_scope()  # Enter loop scope
             if ctx.forCondition().forDeclaration():
                 self.visit(ctx.forCondition().forDeclaration())
             elif ctx.forCondition().expression():
@@ -97,6 +98,7 @@ class SemAnalysisVisitor(CVisitor):
                 self.visit(for_expressions[1])
 
             self.visit(ctx.statement())
+            self.symbol_table.exit_scope()  # Exit loop scope
         else:
             raise NotImplementedError("Unsupported iteration statement")
 

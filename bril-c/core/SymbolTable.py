@@ -52,8 +52,8 @@ class SymbolTable:
 
     def declare_symbol(self, name: str, symbol_entry: SymbolInfo):
         """Declare a new symbol (variable or function) in the current scope."""
-        # if name in self.scopes[-1]:
-        #     raise RuntimeError(f"Symbol '{name}' already declared in the current scope")
+        if name in self.scopes[-1]:
+            raise RuntimeError(f"Symbol '{name}' already declared in the current scope")
         self.scopes[-1][name] = symbol_entry
 
     def lookup_symbol(self, name: str) -> SymbolInfo:
