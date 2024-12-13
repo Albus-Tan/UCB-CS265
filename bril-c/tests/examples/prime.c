@@ -18,7 +18,7 @@ int main() {
            int remainder = number - (number / divisor) * divisor;
            if (remainder == 0) {
                isPrime = false;
-            //    break;
+               break;
            }
        }
        if (isPrime) {

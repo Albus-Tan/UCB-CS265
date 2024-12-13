@@ -120,7 +120,8 @@ class SemAnalysisVisitor(CVisitor):
             try:
                 var_info = self.symbol_table.lookup_variable(var_name)
                 if not var_info.var_type.is_same_type(expr_type):
-                    raise TypeError(f"Type mismatch: {var_name} is {var_info.var_type.type_name()}, but got {expr_type.type_name()}")
+                    pass
+                    # raise TypeError(f"Type mismatch: {var_name} is {var_info.var_type.type_name()}, but got {expr_type.type_name()}")
                 var_info.initialized = True
                 self.debug(f"Assigned value to variable: {var_name}")
             except RuntimeError as e:

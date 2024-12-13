@@ -30,4 +30,17 @@ int main() {
 
     int neg = -a;
     printf("%d\n", neg);
+
+    int to_add = 1;
+    to_add++;
+    printf("%d\n", to_add);
+    ++to_add;
+    printf("%d\n", to_add);
+
+    to_add--;
+    to_add--;
+    printf("%d\n", to_add);
+    --to_add;
+    --to_add;
+    printf("%d\n", to_add);
 }

@@ -49,6 +49,7 @@ chmod +x ./test_c_vs_bril.sh
     - `%` is supportted through `a % b = a − (a / b) × b`
 - assignment operators (+=, -=, *=, /=)
 - postfix operators (++, --)
+- prefix operators (++, --)
 
 
 ## Comparison
