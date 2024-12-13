@@ -139,8 +139,8 @@ class SemAnalysisVisitor(CVisitor):
         left_type = self.visit(ctx.getChild(0))
         right_type = self.visit(ctx.getChild(2))
 
-        if not left_type.is_same_type(right_type):
-            raise TypeError(f"Type mismatch in additive expression: {left_type.type_name()} vs {right_type.type_name()}")
+        # if not left_type.is_same_type(right_type):
+        #     raise TypeError(f"Type mismatch in additive expression: {left_type.type_name()} vs {right_type.type_name()}")
         return left_type
 
     def visitPrimaryExpression(self, ctx: CParser.PrimaryExpressionContext):

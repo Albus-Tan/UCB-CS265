@@ -27,6 +27,8 @@ int main() {
     printf("%d\n", add);
     int sub = div - mul;
     printf("%d\n", sub);
+    printf("%d\n", a * b * m);
+    printf("%d\n", a + b - div + m);
 
     int neg = -a;
     printf("%d\n", neg);
