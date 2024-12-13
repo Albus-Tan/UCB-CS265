@@ -343,77 +343,93 @@ class CToBrilVisitor(CVisitor):
                     })
 
         return base_expr
-
+    
     def visitAdditiveExpression(self, ctx: CParser.AdditiveExpressionContext):
         """
-        Handles addition and subtraction.
+        Handles addition and subtraction for potentially chained operations.
         """
         if ctx.getChildCount() == 1:
             # Single child, visit recursively
             return self.visit(ctx.getChild(0))
 
-        left = self.visit(ctx.getChild(0))
-        right = self.visit(ctx.getChild(2))
-        op = ctx.getChild(1).getText()  # '+' or '-'
-        temp_var = self.generate_temp_var()
+        # Start with the leftmost operand
+        result_var = self.visit(ctx.getChild(0))
 
-        bril_op = "add" if op == "+" else "sub"
-        self.current_function["instrs"].append({
-            "op": bril_op,
-            "dest": temp_var,
-            "args": [left, right],
-            "type": "int"
-        })
-        return temp_var
+        # Process each operation and its right operand in sequence
+        for i in range(1, ctx.getChildCount(), 2):
+            op = ctx.getChild(i).getText()  # Get the operator: '+' or '-'
+            right = self.visit(ctx.getChild(i + 1))
+            temp_var = self.generate_temp_var()
 
-    def visitMultiplicativeExpression(self, ctx: CParser.MultiplicativeExpressionContext):
-        """
-        Handles multiplication, division, and modulo.
-        """
-        if ctx.getChildCount() == 1:
-            # Single child, visit recursively
-            return self.visit(ctx.getChild(0))
-
-        left = self.visit(ctx.getChild(0))
-        right = self.visit(ctx.getChild(2))
-        op = ctx.getChild(1).getText()  # '*', '/', or '%'
-        temp_var = self.generate_temp_var()
-
-        if op == "%":
-            # Generate equivalent mod operation
-            # mod(a,b) = a − (a / b) × b
-            temp_div = self.generate_temp_var()
-            temp_mul = self.generate_temp_var()
-
-            self.current_function["instrs"].append({
-                "op": "div",
-                "dest": temp_div,
-                "args": [left, right],
-                "type": "int"
-            })
-            self.current_function["instrs"].append({
-                "op": "mul",
-                "dest": temp_mul,
-                "args": [temp_div, right],
-                "type": "int"
-            })
-            self.current_function["instrs"].append({
-                "op": "sub",
-                "dest": temp_var,
-                "args": [left, temp_mul],
-                "type": "int"
-            })
-        else:
-            # Handle * and /
-            bril_op = "mul" if op == "*" else "div"
+            # Determine the operation type
+            bril_op = "add" if op == "+" else "sub"
             self.current_function["instrs"].append({
                 "op": bril_op,
                 "dest": temp_var,
-                "args": [left, right],
+                "args": [result_var, right],
                 "type": "int"
             })
 
-        return temp_var
+            # Update result_var for the next operation
+            result_var = temp_var
+
+        return result_var
+
+    def visitMultiplicativeExpression(self, ctx: CParser.MultiplicativeExpressionContext):
+        """
+        Handles multiplication, division, and modulo for potentially chained operations.
+        """
+        if ctx.getChildCount() == 1:
+            # Single child, visit recursively
+            return self.visit(ctx.getChild(0))
+
+        # Start with the leftmost operand
+        left = self.visit(ctx.getChild(0))
+
+        # Process each operation and its right operand in sequence
+        result_var = left
+        for i in range(1, ctx.getChildCount(), 2):
+            op = ctx.getChild(i).getText()  # Get the operator: '*', '/', or '%'
+            right = self.visit(ctx.getChild(i + 1))
+            temp_var = self.generate_temp_var()
+
+            if op == "%":
+                # Generate equivalent mod operation
+                temp_div = self.generate_temp_var()
+                temp_mul = self.generate_temp_var()
+
+                self.current_function["instrs"].append({
+                    "op": "div",
+                    "dest": temp_div,
+                    "args": [result_var, right],
+                    "type": "int"
+                })
+                self.current_function["instrs"].append({
+                    "op": "mul",
+                    "dest": temp_mul,
+                    "args": [temp_div, right],
+                    "type": "int"
+                })
+                self.current_function["instrs"].append({
+                    "op": "sub",
+                    "dest": temp_var,
+                    "args": [result_var, temp_mul],
+                    "type": "int"
+                })
+            else:
+                # Handle '*' and '/'
+                bril_op = "mul" if op == "*" else "div"
+                self.current_function["instrs"].append({
+                    "op": bril_op,
+                    "dest": temp_var,
+                    "args": [result_var, right],
+                    "type": "int"
+                })
+
+            # Update result_var for the next operation
+            result_var = temp_var
+
+        return result_var
 
     def visitRelationalExpression(self, ctx: CParser.RelationalExpressionContext):
         if ctx.getChildCount() == 1:
