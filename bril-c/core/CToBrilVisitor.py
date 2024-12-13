@@ -500,20 +500,31 @@ class CToBrilVisitor(CVisitor):
 
     def visitUnaryExpression(self, ctx: CParser.UnaryExpressionContext):
         """
-        Handles unary expressions for code generation.
+        Handles unary expressions for code generation, including ++i and --i.
         """
-        if ctx.postfixExpression():
-            return self.visit(ctx.postfixExpression())
+        # Handle multiple unary operators (e.g., ++, --, etc.)
+        unary_operators = ctx.getChildren()
+        operator_stack = []
 
-        if ctx.unaryOperator():
+        for child in unary_operators:
+            text = child.getText()
+            if text in ('++', '--'):
+                operator_stack.append(text)
+            else:
+                break
+
+        # Handle base cases (postfixExpression or unaryOperator castExpression)
+        if ctx.postfixExpression():
+            base_expr = self.visit(ctx.postfixExpression())
+        elif ctx.unaryOperator():
             operator = ctx.unaryOperator().getText()
             operand = self.visit(ctx.castExpression())
-            temp_var = self.generate_temp_var()
 
             if operator == '+':
-                # No operation needed for unary plus
+                # Unary plus: no operation needed
                 return operand
             elif operator == '-':
+                # Unary minus: 0 - operand
                 zero_var = self.generate_temp_var()
                 self.current_function["instrs"].append({
                     "op": "const",
@@ -540,8 +551,30 @@ class CToBrilVisitor(CVisitor):
                 return temp_var
             else:
                 raise NotImplementedError(f"Unsupported unary operator: {operator}")
+        else:
+            raise NotImplementedError("Unsupported unary expression")
 
-        raise NotImplementedError("Unsupported unary expression")
+        # Process operator stack for `++i` and `--i`
+        for operator in reversed(operator_stack):
+            if operator in ('++', '--'):
+                one_var = self.generate_temp_var()
+                self.current_function["instrs"].append({
+                    "op": "const",
+                    "dest": one_var,
+                    "type": "int",
+                    "value": 1
+                })
+                bril_op = 'add' if operator == '++' else 'sub'
+                self.current_function["instrs"].append({
+                    "op": bril_op,
+                    "dest": base_expr,
+                    "args": [base_expr, one_var],
+                    "type": "int"
+                })
+            else:
+                raise NotImplementedError(f"Unsupported unary operator: {operator}")
+
+        return base_expr
 
     def visitJumpStatement(self, ctx: CParser.JumpStatementContext):
         """
