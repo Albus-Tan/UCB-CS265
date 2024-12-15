@@ -50,7 +50,7 @@ chmod +x ./test_c_vs_bril.sh
 - assignment operators (+=, -=, *=, /=)
 - postfix operators (++, --)
 - prefix operators (++, --)
-
+- unary - operator
 
 ## Comparison
 
@@ -64,19 +64,20 @@ chmod +x ./test_c_vs_bril.sh
 
 > Translate to `not`, `and`, `or` in bril
 
-- boolean logic (!,&,|)
+- boolean logic (!,&&,||)
 
 ## Control
 
 > Translate to `jmp`, `br` and `labels` in bril
 
-- for loops (for, break)
+- for loops (for, continue, break)
 - if statements (if-then-else)
 
 ## Functions
 
 > Translate to `call`, `ret` in bril
 
+- function definition
 - function calls
 - return statement
 
