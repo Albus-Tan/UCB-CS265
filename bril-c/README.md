@@ -36,9 +36,9 @@ chmod +x ./test_c_vs_bril.sh
 
 ## Types
 
-> Translate to `int`, `float` types and `const` in bril
+> Translate to `int`, `bool` types and `const` in bril
 
-- primitive data types (int, float)
+- primitive data types (int, bool)
 - const type qualifier
 
 ## Arithmetic
